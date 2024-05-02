@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id    Int    @id @default(autoincrement())
+
+  // Relations
+  productHistories      ProductHistory[]
+  productLinks          ProductLink[]
+  productDuplicateLog   ProductDuplicateLog?
+  productUploadTasks    ProductUploadTask[]
+
+  @@map("product")
+}
+
+model ProductLink {
+  id        Int       @id @default(autoincrement())
+
+  productId Int
+  taskId    Int?      @unique
+
+  // Relations
+  product             Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productUploadTask   ProductUploadTask?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  productUpdateTasks  ProductUpdateTask[]
+
+  @@map("product_link")
+}
+
+model ProductHistory {
+  id        Int      @id @default(autoincrement())
+
+  eventType String
+  productId Int
+  userId    Int?
+
+  // Relations
+  product                   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user                      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productCreationLog        ProductCreateLog?
+  productDuplicateLog       ProductDuplicateLog?
+  productEditLog            ProductEditLog?
+  productInventoryUpdateLog ProductInventoryUpdateLog?
+  productPricingUpdateLog   ProductPricingUpdateLog?
+  productUploadLog          ProductUploadLog?
+
+  @@map("product_history")
+}
+
+model ProductCreateLog {
+  id            Int            @id @default(autoincrement())
+  historyId     Int            @unique @map("history_id")
+
+  // Relations
+  productHistory ProductHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+
+  @@map("product_create_log")
+}
+
+model ProductDuplicateLog {
+  id            Int            @id @default(autoincrement())
+  historyId     Int            @unique @map("history_id")
+
+  duplicateProductId Int?      @unique
+
+
+  // Relations
+  productHistory    ProductHistory  @relation(fields: [historyId], references: [id], onDelete: Cascade)
+  duplicateProduct  Product?        @relation(fields: [duplicateProductId], references: [id], onDelete: SetNull)
+
+  @@map("product_duplicate_log")
+}
+
+model ProductEditLog {
+  id               Int           @id @default(autoincrement())
+  historyId        Int           @unique
+
+  editField        String
+  newValue         String?
+  previousValue    String?
+
+  // Relations
+  productHistory ProductHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+
+  @@map("product_edit_log")
+}
+
+model ProductInventoryUpdateLog {
+  id                Int            @id @default(autoincrement())
+  historyId         Int            @unique
+
+  taskId            Int?           @unique
+  previousQuantity  Int
+  newQuantity       Int
+
+  // Relations
+  productHistory    ProductHistory      @relation(fields: [historyId], references: [id], onDelete: Cascade)
+  productUpdateTask ProductUpdateTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@map("product_inventory_update_log")
+}
+
+model ProductPricingUpdateLog {
+  id            Int            @id @default(autoincrement())
+  historyId     Int            @unique
+
+  taskId        Int?           @unique
+  previousPrice Decimal
+  newPrice      Decimal
+
+  // Relations
+  productHistory    ProductHistory      @relation(fields: [historyId], references: [id], onDelete: Cascade)
+  productUpdateTask ProductUpdateTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@map("product_pricing_update_log")
+}
+
+model ProductUpdateTask {
+  id                Int            @id @default(autoincrement())
+
+  productLinkId     Int
+  userId            Int?
+
+  // Relations
+  productLink               ProductLink               @relation(fields: [productLinkId], references: [id], onDelete: Cascade)
+  user                      User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productInventoryUpdateLog ProductInventoryUpdateLog?
+  productPricingUpdateLog   ProductPricingUpdateLog?
+
+  @@map("product_update_task")
+}
+
+model ProductUploadLog {
+  id            Int            @id @default(autoincrement())
+  historyId     Int            @unique
+
+  description   String
+  name          String
+  taskId        Int?           @unique
+  
+
+  // Relations
+  productHistory    ProductHistory      @relation(fields: [historyId], references: [id], onDelete: Cascade)
+  productUploadTask ProductUploadTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@map("product_upload_log")
+}
+
+model ProductUploadTask {
+  id                Int            @id @default(autoincrement())
+
+  productId         Int
+  userId            Int?
+
+  // Relations
+  product               Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productLink           ProductLink?
+  productUploadTaskLog  ProductUploadLog?
+  user                  User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("product_upload_task")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+
+  // Relations
+  logs                ProductHistory[]
+  productUpdateTasks  ProductUpdateTask[]
+  productUploadTasks  ProductUploadTask[]
+
+  @@map("user")
+}
